@@ -1,0 +1,44 @@
+digraph G {
+  rankdir=TB;
+  bgcolor="white";
+  node [fontname="Noto Sans CJK SC", fontsize=11, shape=box, style="rounded,filled", fillcolor="#F2F2F2", color="#666666"];
+  edge [fontname="Noto Sans CJK SC", fontsize=10, color="#888888"];
+
+  start [label="用户点击笔记\n(列表/侧边栏/快捷键/URL)", fillcolor="#DCE9F7", shape=ellipse];
+  locate [label="Storage.getBy(url:)\n定位 Note 对象", fillcolor="#FCE8D5"];
+  loadfile [label="Note.uiLoad() / load()\nparseURL() 解析元数据\n(YAML: 标题/创建时间/标签)", fillcolor="#FCE8D5"];
+  decrypt [label="若为 .etp\nKeychain 取主密码 → Touch ID?\nRNCryptor.decrypt → 明文", fillcolor="#F6CFCF"];
+  textbundle [label="若为 .textbundle\nloadTextBundle(): text.md + assets/ + info.json", fillcolor="#FCE8D5"];
+  editor [label="EditTextView 加载\nNSMutableAttributedString\n(editor.note 绑定)", fillcolor="#DCE9F7"];
+  storageproc [label="TextStorageProcessor\n(NSTextStorageDelegate, 每次编辑触发)", fillcolor="#FCE8D5", shape=diamond];
+  hashcheck [label="内容哈希未变?\n(fnva1a == cacheHash)\n→ 跳过高亮", fillcolor="#FCE8D5", shape=diamond];
+  mdhl [label="NotesTextProcessor\n.highlightMarkdown()\n段落级 Markdown 高亮\n(标题/引用/列表/链接/图片)", fillcolor="#FCE8D5"];
+  codeblock [label="CodeBlockDetector\n.findCodeBlocks()\n识别 ``` 代码块范围", fillcolor="#FCE8D5"];
+  swiftHL [label="SwiftHighlighter\n.highlight() 代码块语法高亮\n(增量: editedBlock/editedParagraph)", fillcolor="#FCE8D5"];
+  images [label="loadImages()\n附件/远程图片异步加载\n(NoteAttachment / 缩略图 / .icloud 占位)", fillcolor="#FCE8D5"];
+  autosave [label="防抖自动保存\nNote.save() → write()", fillcolor="#DCE9F7"];
+  saveformat [label="按格式写回\n.md 直写 / .textbundle 写包\n.etp → RNCryptor.encrypt\n失败进 plainWriter/ciphertextWriter 队列", fillcolor="#FCE8D5"];
+  preview [label="预览开关 ON\nMPreviewView.buildPage(note)", fillcolor="#DCE9F7"];
+  html [label="renderMarkdownHTML()\nlibcmark-gfm (footnotes/table/\nstrikethrough/tasklist/autolink)\n+ 替换 ---/ {{TOC}}", fillcolor="#FCE8D5"];
+  template [label="HTML 模板拼装\n注入样式 / MathJax / Mermaid\nsourcepos / web 发布模式", fillcolor="#FCE8D5"];
+  webview [label="WKWebView.loadHTMLString\nJS 桥: 复选框/链接/图片\nQuickLook/滚动同步/剪贴板", fillcolor="#DCE9F7"];
+  fsnotify [label="保存后触发\nFileWatcher(FSEvents) 事件\n→ FileSystemEventManager 去抖合并", fillcolor="#FCE8D5"];
+  diff [label="Storage diff\nsyncImportedTree / getProjectDiffs\n→ 侧边栏+列表局部刷新", fillcolor="#FCE8D5"];
+
+  start -> locate -> loadfile;
+  loadfile -> decrypt [label=".etp"];
+  loadfile -> textbundle [label=".textbundle"];
+  loadfile -> editor [label=".md/.txt"];
+  decrypt -> editor;
+  textbundle -> editor;
+  editor -> storageproc [label="每次击键/粘贴/删除"];
+  storageproc -> hashcheck;
+  hashcheck -> storageproc [label="内容未变, 跳过"];
+  hashcheck -> mdhl [label="有变化"];
+  mdhl -> codeblock -> swiftHL -> images -> storageproc [label="循环: 持续编辑"];
+  storageproc -> autosave [label="防抖定时器"];
+  autosave -> saveformat -> fsnotify -> diff;
+  editor -> preview [label="预览按钮/快捷键"];
+  preview -> html -> template -> webview;
+  webview -> editor [label="JS 事件回传: 勾选任务/点击链接"];
+}

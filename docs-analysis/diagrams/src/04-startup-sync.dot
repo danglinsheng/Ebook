@@ -1,0 +1,83 @@
+digraph G {
+  rankdir=TB;
+  bgcolor="white";
+  node [fontname="Noto Sans CJK SC", fontsize=11, shape=box, style="rounded,filled", fillcolor="#F2F2F2", color="#666666"];
+  edge [fontname="Noto Sans CJK SC", fontsize=10, color="#888888"];
+
+  subgraph cluster_boot {
+    label="阶段 1: macOS 启动 (AppDelegate)";
+    style="rounded,dashed";
+    color="#7EA6E0";
+    fillcolor="#F4F8FD";
+    fontsize=12;
+
+    will [label="applicationWillFinishLaunching\ncheckStorageChanges (iCloud迁移检测)\nloadDockIcon / constructMenu(菜单栏)", fillcolor="#DCE9F7"];
+    did [label="applicationDidFinishLaunching\napplyAppearance / iCloud目录初始化", fillcolor="#DCE9F7"];
+    choose [label="storagePath 为空?\n→ NSOpenPanel 选存储目录\n→ SandboxBookmark 存安全书签\n→ restartApp()", fillcolor="#F6CFCF", shape=diamond];
+    mainwc [label="实例化 MainWindowController\n(Main.storyboard)", fillcolor="#DCE9F7"];
+  }
+
+  subgraph cluster_load {
+    label="阶段 2: 数据加载 (Storage 单例)";
+    style="rounded,dashed";
+    color="#D9A441";
+    fillcolor="#FDF8EC";
+    fontsize=12;
+
+    storageinit [label="Storage.shared() init\nSandboxBookmark.load() 恢复权限\ngetRoot() 解析存储根\nremoveCachesIfCrashed()", fillcolor="#FCE8D5"];
+    project [label="创建默认 Project + Trash\nassignTrash / assignBookmarks", fillcolor="#FCE8D5"];
+    scan [label="loadInboxAndTrash / loadProjects\n扫描文件系统 → noteList/projects/tags\n(Project 目录递归, 深层目录修复)", fillcolor="#FCE8D5"];
+    index [label="建立 notesByProject 索引\n(定制: 侧边栏快速过滤)", fillcolor="#FCE8D5"];
+    menu [label="installStorageMenuItems()\n【定制】注入: 从模板新建 / 导入文件夹 /\n备份存储目录 / 文件夹按名称排序", fillcolor="#E8F5E9"];
+    welcome [label="checkWelcome()\n首次运行向导笔记", fillcolor="#FCE8D5"];
+  }
+
+  subgraph cluster_runtime {
+    label="阶段 3: 运行期同步";
+    style="rounded,dashed";
+    color="#8AAE8A";
+    fillcolor="#F0F7F0";
+    fontsize=12;
+
+    fsevents [label="FileWatcher (FSEvents)\n监听所有项目目录", fillcolor="#D9EAD3"];
+    debounce [label="FileSystemEventManager\nmustRescan? → 整树重扫\n否则去抖合并 pendingSync", fillcolor="#D9EAD3"];
+    sync [label="syncImportedTree / getProjectDiffs\ninsert/remove/relocate Note", fillcolor="#D9EAD3"];
+    refresh [label="UI 局部刷新\nsidebarOutlineView.insertRows\nnotesTableView.doVisualChanges", fillcolor="#D9EAD3"];
+  }
+
+  subgraph cluster_git {
+    label="阶段 4: Git 自动备份 (可选)";
+    style="rounded,dashed";
+    color="#C96F6F";
+    fillcolor="#FDF0F0";
+    fontsize=12;
+
+    timer [label="EditorViewController\nsnapshotsTimer / pullTimer", fillcolor="#F6CFCF"];
+    queue [label="ViewController.gitQueue\n(串行, maxConcurrentOperationCount=1)", fillcolor="#F6CFCF"];
+    commit [label="变更检测 → 快照 commit\nRepositoryManager (swift-git/libgit2)\npull/push + 冲突解决", fillcolor="#F6CFCF"];
+  }
+
+  subgraph cluster_ios {
+    label="iOS 启动 (SceneDelegate)";
+    style="rounded,dashed";
+    color="#7EA6E0";
+    fillcolor="#F4F8FD";
+    fontsize=12;
+
+    scene [label="scene(willConnectTo:)\nMainNavigationController(列表VC)\n预加载 EditorViewController", fillcolor="#DCE9F7"];
+    shortcuts [label="快捷动作/URL/状态恢复\nfsnotes://open|find", fillcolor="#DCE9F7"];
+    appgroup [label="App Group 共享容器\ngroup.es.fsnot.user.defaults\n+ Share 扩展写入", fillcolor="#DCE9F7"];
+  }
+
+  will -> did -> choose;
+  choose -> mainwc [label="已配置"];
+  choose -> will [label="取消则退出"];
+  mainwc -> storageinit -> project -> scan -> index -> menu -> welcome;
+  welcome -> fsevents;
+  fsevents -> debounce -> sync -> refresh -> fsevents [label="持续监听"];
+  refresh -> timer [label="编辑器活动时"];
+  timer -> queue -> commit;
+  scene -> appgroup;
+  scene -> shortcuts;
+  appgroup -> storageinit [label="同一 Storage/FSNotesCore"];
+}

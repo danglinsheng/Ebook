@@ -1,0 +1,67 @@
+digraph G {
+  rankdir=TB;
+  bgcolor="white";
+  node [fontname="Noto Sans CJK SC", fontsize=12, shape=box, style="rounded,filled", fillcolor="#F2F2F2", color="#666666"];
+  edge [fontname="Noto Sans CJK SC", fontsize=10, color="#888888"];
+
+  subgraph cluster_clients {
+    label="客户端 (Apple 平台)";
+    style="rounded,dashed";
+    color="#999999";
+    fontsize=13;
+    fillcolor="#FAFAFA";
+
+    macos [label="macOS App\nFSNotes / MyFSNotes\n(AppKit)", fillcolor="#DCE9F7"];
+    ios [label="iOS App\n(UIKit + Scene)", fillcolor="#DCE9F7"];
+    share [label="iOS 分享扩展\nShareViewController", fillcolor="#DCE9F7"];
+  }
+
+  subgraph cluster_core {
+    label="共享业务核心 FSNotesCore (Swift, 跨平台)";
+    style="rounded,dashed";
+    color="#999999";
+    fontsize=13;
+    fillcolor="#FDF6E3";
+
+    model [label="数据模型\nNote / Project / Storage(单例索引)\nSearchQuery / NoteMeta", fillcolor="#FCE8D5"];
+    text [label="文本处理\nNotesTextProcessor / FSParser\nCodeBlockDetector / SwiftHighlighter", fillcolor="#FCE8D5"];
+    render [label="渲染管线\nMarkdown(libcmark-gfm) → HTML\nMPreviewView(WKWebView)\nMathJax / Mermaid / 模板", fillcolor="#FCE8D5"];
+    files [label="文件与附件\n.md/.txt/.textbundle/.etp\nImagesProcessor / RNCryptor(AES-256)", fillcolor="#FCE8D5"];
+    sync [label="同步与版本\nGit(swift-git/libgit2)\nFileWatcher(FSEvents)\nSandboxBookmark(安全书签)", fillcolor="#FCE8D5"];
+  }
+
+  subgraph cluster_store {
+    label="存储层";
+    style="rounded,dashed";
+    color="#999999";
+    fontsize=13;
+    fillcolor="#EAF4EA";
+
+    disk [label="本地文件系统\nMarkdown / TextBundle / ETP", fillcolor="#D9EAD3"];
+    icloud [label="iCloud Drive / App Group", fillcolor="#D9EAD3"];
+    gitrepo [label="Git 裸仓库\n(独立 .git 或集中 gitStorage)", fillcolor="#D9EAD3"];
+    keychain [label="Keychain\n主密码 / 凭据", fillcolor="#D9EAD3"];
+  }
+
+  subgraph cluster_ext {
+    label="外部服务与框架";
+    style="rounded,dashed";
+    color="#999999";
+    fontsize=13;
+    fillcolor="#FDECEC";
+
+    webapi [label="FSNotes Web API\napi.fsnot.es / p.fsnot.es", fillcolor="#F6CFCF"];
+    apple [label="Apple 框架\nWebKit / AppKit / UIKit\nFSEvents / LocalAuthentication", fillcolor="#F6CFCF"];
+  }
+
+  macos -> model; macos -> text; macos -> render; macos -> sync;
+  ios -> model; ios -> text; ios -> render; ios -> sync;
+  share -> files [label="写入共享容器"];
+  model -> disk; model -> icloud;
+  text -> disk;
+  render -> apple;
+  files -> disk; files -> keychain;
+  sync -> disk; sync -> gitrepo; sync -> icloud;
+  model -> webapi [label="Web 发布/更新/删除"];
+  share -> icloud [label="App Group 共享"];
+}

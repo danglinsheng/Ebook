@@ -1,0 +1,89 @@
+digraph G {
+  rankdir=TB;
+  bgcolor="white";
+  node [fontname="Noto Sans CJK SC", fontsize=11, shape=box, style="rounded,filled", fillcolor="#F2F2F2", color="#666666"];
+  edge [fontname="Noto Sans CJK SC", fontsize=9, color="#888888"];
+
+  subgraph cluster_ui_mac {
+    label="macOS UI 层 (FSNotes/) — AppKit";
+    style="rounded,dashed";
+    color="#7EA6E0";
+    fillcolor="#F4F8FD";
+    fontsize=12;
+
+    appdelegate [label="AppDelegate\n启动/菜单栏/窗口状态", fillcolor="#DCE9F7"];
+    mainvc [label="ViewController\n侧边栏+列表+搜索+菜单", fillcolor="#DCE9F7"];
+    editor [label="EditorViewController\n编辑器基类/预览切换/自动保存", fillcolor="#DCE9F7"];
+    edittext [label="EditTextView 系列\n自定义 NSTextView", fillcolor="#DCE9F7"];
+    sidebar [label="Sidebar*/NotesTableView\nNoteCellView", fillcolor="#DCE9F7"];
+    prefs [label="Preferences/*\n设置面板(8 个)", fillcolor="#DCE9F7"];
+    helpers [label="Helpers\nFileWatcher / Printer / SandboxBookmark", fillcolor="#DCE9F7"];
+  }
+
+  subgraph cluster_ui_ios {
+    label="iOS UI 层 (FSNotes iOS/ + Share/) — UIKit";
+    style="rounded,dashed";
+    color="#7EA6E0";
+    fillcolor="#F4F8FD";
+    fontsize=12;
+
+    scenedelegate [label="SceneDelegate\n生命周期/快捷动作/URL", fillcolor="#DCE9F7"];
+    ioslist [label="ViewController(列表)\nMainNavigationController", fillcolor="#DCE9F7"];
+    ioseditor [label="EditorViewController\nRevisions/Move/QuickLook", fillcolor="#DCE9F7"];
+    shareext [label="ShareViewController\n分享扩展", fillcolor="#DCE9F7"];
+  }
+
+  subgraph cluster_core {
+    label="FSNotesCore — 业务核心(跨平台, #if os 条件编译)";
+    style="rounded,dashed";
+    color="#D9A441";
+    fillcolor="#FDF8EC";
+    fontsize=12;
+
+    model [label="Business/ 模型\nNote(2401行)/Project(931)/Storage(1727)\nSearchQuery/SidebarItem/ProjectSettings", fillcolor="#FCE8D5"];
+    textproc [label="文本处理\nNotesTextProcessor(1378)/TextStorageProcessor\nFSParser/CodeBlockDetector", fillcolor="#FCE8D5"];
+    highlight [label="SwiftHighlighter\nLanguages/ + Themes/", fillcolor="#FCE8D5"];
+    preview [label="渲染\nMarkdown.swift(libcmark-gfm)\nMPreviewView/HtmlExtractor", fillcolor="#FCE8D5"];
+    media [label="媒体\nImagesProcessor/NoteAttachment\nNSTextAttachment+/URL+Image", fillcolor="#FCE8D5"];
+    git [label="Git/ (swift-git)\nrepository/commit/diff/status/branch...\nProject+Git/Storage+Git", fillcolor="#FCE8D5"];
+    infra [label="基础设施\nUserDefaultsManagement(平台差异)\nKeychainConfiguration/SandboxBookmark\nExtensions/(30+ 扩展)", fillcolor="#FCE8D5"];
+  }
+
+  subgraph cluster_third {
+    label="第三方依赖 (SwiftPM)";
+    style="rounded,dashed";
+    color="#C96F6F";
+    fillcolor="#FDF0F0";
+    fontsize=12;
+
+    cmark [label="libcmark_gfm\n(C, Markdown 解析)", fillcolor="#F6CFCF"];
+    cryptor [label="RNCryptor\nAES-256", fillcolor="#F6CFCF"];
+    libgit [label="swift-git (libgit2)\nGit 操作", fillcolor="#F6CFCF"];
+    misc [label="ZipArchive / SoulverCore\nShout(快捷键)/DropDown\nSwipeCellKit/TOCropViewController", fillcolor="#F6CFCF"];
+  }
+
+  subgraph cluster_apple {
+    label="Apple 系统框架";
+    style="rounded,dashed";
+    color="#8AAE8A";
+    fillcolor="#F0F7F0";
+    fontsize=12;
+
+    frameworks [label="AppKit / UIKit / WebKit\nFSEvents / Security(Keychain)\nLocalAuthentication / UserNotifications\nCoreServices / CoreData(模型)", fillcolor="#D9EAD3"];
+  }
+
+  mainvc -> model; mainvc -> textproc; mainvc -> preview; mainvc -> git; mainvc -> infra;
+  editor -> edittext; editor -> textproc; editor -> preview; editor -> model;
+  edittext -> textproc; edittext -> highlight;
+  sidebar -> model; prefs -> infra; helpers -> model;
+  appdelegate -> mainvc; appdelegate -> helpers;
+  scenedelegate -> ioslist; scenedelegate -> ioseditor;
+  ioslist -> model; ioslist -> infra; ioseditor -> model; ioseditor -> textproc; ioseditor -> preview;
+  shareext -> infra;
+  model -> infra;
+  textproc -> highlight; textproc -> media;
+  preview -> cmark; preview -> misc;
+  media -> cryptor;
+  git -> libgit;
+  model -> frameworks; preview -> frameworks; helpers -> frameworks; infra -> frameworks;
+}
